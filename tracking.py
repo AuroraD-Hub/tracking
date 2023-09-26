@@ -6,7 +6,6 @@ import cv2 as cv
 import math
 import time
 import socket
-import matplotlib.pyplot as plt
 
 #Rmtx_prev = np.empty((3,3))
 #Tvec_prev = np.empty((3,1))
