@@ -3,7 +3,7 @@
 import mraa
 import time
 
-SERVO_PIN = 11 # GPIO pin number connected to the servo
+SERVO_PIN = 3 # GPIO pin number connected to the servo
 MIN_PULSE = 544 # Minimum pulse width (in microseconds) for the servo
 MAX_PULSE = 2400 # Maximum pulse width (in microseconds) for the servo
 FREQUENCY = 50 # Servo motor frequency (in Hz)
