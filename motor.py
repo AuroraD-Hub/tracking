@@ -16,15 +16,15 @@ def main():
     pwm.period_us(1000000 // FREQUENCY) # Set the PWM period in microseconds
     pwm.enable(True)
     while True:
-    for angle in range(0, 180, 5):
-        pulse = int(map_value(angle, 0, 180, MIN_PULSE, MAX_PULSE))
-        pwm.pulsewidth_us(pulse)
-        time.sleep(0.02)
+        for angle in range(0, 180, 5):
+            pulse = int(map_value(angle, 0, 180, MIN_PULSE, MAX_PULSE))
+            pwm.pulsewidth_us(pulse)
+            time.sleep(0.02)
 
-    for angle in range(180, 0, -5):
-        pulse = int(map_value(angle, 0, 180, MIN_PULSE, MAX_PULSE))
-        pwm.pulsewidth_us(pulse)
-        time.sleep(0.02)
+        for angle in range(180, 0, -5):
+            pulse = int(map_value(angle, 0, 180, MIN_PULSE, MAX_PULSE))
+            pwm.pulsewidth_us(pulse)
+            time.sleep(0.02)
 
 if __name__ == '__main__':
     main()
