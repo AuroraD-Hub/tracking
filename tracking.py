@@ -7,10 +7,10 @@ import math
 import time
 import socket
 
-#Rmtx_prev = np.empty((3,3))
-#Tvec_prev = np.empty((3,1))
+Rmtx_prev = np.empty((3,3))
+Tvec_prev = np.empty((3,1))
 
-def initialize_camera_imu(depth_unit=15/(2**16 - 1), l=640, h=480, fps=30):
+def initialize_camera_imu(depth_unit=15/(2**16 - 1), l=640, h=480, fps=60):
     pipeline = rs.pipeline()
 
     config = rs.config()
@@ -29,8 +29,8 @@ def initialize_camera_imu(depth_unit=15/(2**16 - 1), l=640, h=480, fps=30):
 
     return pipeline
 
-def find_position(frames, detector, points, mtx, dist):
-        #global Rmtx_prev, Tvec_prev
+def find_pose(frames, detector, points, mtx, dist):
+        global Rmtx_prev, Tvec_prev
 
         aligned_depth_frame = frames.get_depth_frame() # aligned_depth_frame is a 640x480 depth image
         color_frame = frames.get_color_frame()
@@ -45,16 +45,16 @@ def find_position(frames, detector, points, mtx, dist):
             print("Detected")
             _, Rvec, Tvec = cv.solvePnP(points, corners[0], mtx, dist)
             Rmtx, _ = cv.Rodrigues(Rvec)
-            #Rmtx_prev = Rmtx
-            #Tvec_prev = Tvec
+            Rmtx_prev = Rmtx
+            Tvec_prev = Tvec
             #cv.aruco.drawDetectedMarkers(image, corners, ids)
             #cv.drawFrameAxes(image, mtx, dist, Rvec, Tvec, 0.1)
         else: 
             print("Missed")
-            #Rmtx = Rmtx_prev
-            #Tvec = Tvec_prev
+            Rmtx = Rmtx_prev
+            Tvec = Tvec_prev
             
-        #cv.imshow("Markers", image)
+        cv.imshow("Markers", image)
 
         return Rmtx, Tvec
 
@@ -96,15 +96,15 @@ def main():
         else:    
             frames = pipeline.wait_for_frames()
 
-            # Orientation tracking
+            # Orientation data
             accel = frames[2].as_motion_frame().get_motion_data()
             gyro = frames[3].as_motion_frame().get_motion_data()
             IMU = np.array([accel.x, accel.y, accel.z, gyro.x, gyro.y, gyro.z]).reshape(1,6)
             simulink.sendto(IMU, ("localhost", 4031))
         
-            # Position tracking
+            # Pose data
             aligned_frames = align.process(frames)
-            Rmtx, Tvec = find_position(aligned_frames, detector, points, mtx, dist)
+            Rmtx, Tvec = find_pose(aligned_frames, detector, points, mtx, dist)
             Pose_marker = np.concatenate((Rmtx.reshape(1,9), Tvec.reshape(1,3)), axis=1)
             simulink.sendto(Pose_marker, ("localhost", 4021))
 
