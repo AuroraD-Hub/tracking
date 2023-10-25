@@ -53,6 +53,15 @@ class VisualOdometry:
         # Define structures needed
         self.old_image = []
         self.old_corners = []
+        #self.mask = [] # variables for drawing purpose
+        #self.color = np.random.randint(0, 255, (500, 3))
+
+    def process_image(self, aligned_frames):
+        image_dist = np.asanyarray(aligned_frames.get_color_frame().get_data())
+        image_undist = cv.undistort(image_dist, self.K, self.dist)
+        image_gray = cv.cvtColor(image_undist, cv.COLOR_RGB2GRAY)
+
+        return image_gray, image_undist
 
     def detect_new_features(self, gray_img):
         corners = self.detector.detect(gray_img)
@@ -64,21 +73,30 @@ class VisualOdometry:
         if string=="init":
             print("Initialisation of tracking algorithm: detection of good features")  
             aligned_frames = self.align.process(self.pipe.wait_for_frames())
-            image = np.asanyarray(aligned_frames.get_color_frame().get_data())
-            self.old_image = cv.cvtColor(image, cv.COLOR_RGB2GRAY)
+            self.old_image, mask_img = self.process_image(aligned_frames)
+            #self.mask = np.zeros_like(mask_img)
             # Detect features
             self.old_corners = self.detect_new_features(self.old_image)
 
         elif string=="track":
             print("Tracking camera pose") 
             aligned_frames = self.align.process(self.pipe.wait_for_frames())
-            image = np.asanyarray(aligned_frames.get_color_frame().get_data())
-            new_image = cv.cvtColor(image, cv.COLOR_RGB2GRAY)
+            new_image, rgb_img = self.process_image(aligned_frames)
             # Use Optical Flow approach with RANSAC method to get feature motion
             new_corners, st, _ = cv.calcOpticalFlowPyrLK(self.old_image, new_image, self.old_corners, None, **self.lk_params)
             st = st.reshape(st.shape[0])
             self.old_corners = self.old_corners[st==1]
             new_corners = new_corners[st==1]
+
+            # Draw optical flow
+            #for i, (new, old) in enumerate(zip(new_corners, self.old_corners)):
+            #    a, b = new.ravel()
+            #    c, d = old.ravel()
+            #    self.mask = cv.line(self.mask, (int(a), int(b)), (int(c), int(d)), 0, 2)
+            #    frame = cv.circle(rgb_img, (int(a), int(b)), 5, self.color[i].tolist(), -1)
+            #    img = cv.add(frame, self.mask)
+            #    cv.imshow('Optical flow', img)
+
             # Retrive camera pose
             E, _ = cv.findEssentialMat(new_corners,self.old_corners, self.K)
             _, R, p, _ = cv.recoverPose(E, new_corners, self.old_corners, self.K)
@@ -106,8 +124,9 @@ def main():
     simulink = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # Create instance of RealSenseD435i VisualOdometry classes and initialise them
-    mtx, dist, align = RealSenseD435i().get_camera_setup()
-    pipeline = RealSenseD435i().get_camera_ready()
+    d435i = RealSenseD435i()
+    mtx, dist, align = d435i.get_camera_setup()
+    pipeline = d435i.get_camera_ready()
     tracker = VisualOdometry(pipeline,mtx,dist,align)
     tracker.get_pose("init") 
     
